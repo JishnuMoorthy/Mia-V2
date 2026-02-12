@@ -509,7 +509,114 @@ This Phase 1 frontend is successfully integrated when:
 
 ---
 
-## 📞 GUARDRAIL ENFORCEMENT
+## � SECURITY GUARDRAILS
+
+### No Production Secrets in Code
+- ✅ API base URL from environment variable (NEXT_PUBLIC_API_BASE_URL)
+- ✅ No hardcoded API keys, tokens, or credentials
+- ✅ No console.log() of sensitive data (tokens, passwords)
+- ✅ Remove all TODO/FIXME comments before delivery
+- ✅ `.env.local` in `.gitignore` (NEVER committed)
+
+### Authentication Security
+- ✅ Token stored in HTTP-only, Secure cookie (preferred) or localStorage
+- ✅ CSRF protection if using cookies for state mutations
+- ✅ Token refresh strategy implemented (handle 401 responses)
+- ✅ Token expiration handling (redirect to login on 401)
+- ✅ Logout clears all sensitive data
+
+### API Security
+- ✅ All requests use HTTPS in production (configured via env var)
+- ✅ CORS headers properly configured on backend
+- ✅ Input validation on all forms (client-side + server-side)
+- ✅ Output encoding prevents XSS (use React's default escaping)
+- ✅ No dangerouslySetInnerHTML usage
+
+### Dependency Security
+- ✅ No known vulnerabilities: `npm audit` passes
+- ✅ Dependencies updated regularly
+- ✅ Lock file (package-lock.json) committed
+
+---
+
+## 🚀 PERFORMANCE GUARDRAILS
+
+### Build & Runtime Performance
+- ✅ Production build < 250KB gzipped (JavaScript)
+- ✅ First Contentful Paint < 2 seconds
+- ✅ Largest Contentful Paint < 2.5 seconds
+- ✅ Cumulative Layout Shift < 0.1
+- ✅ Interaction to Next Paint < 100ms
+
+### Lighthouse Scores
+- ✅ Desktop Performance > 80
+- ✅ Mobile Performance > 75
+- ✅ Accessibility > 85
+- ✅ Best Practices > 85
+- ✅ SEO > 80
+
+### Runtime Optimization
+- ✅ API calls debounced/throttled (search, filter, etc.)
+- ✅ Images lazy-loaded with `next/image`
+- ✅ Code splitting enabled (Next.js automatic)
+- ✅ No N+1 API calls (batch where possible)
+- ✅ No memory leaks (proper cleanup in useEffect)
+- ✅ Pagination prevents loading massive lists
+
+### Monitoring & Observability
+- ✅ Error boundary on all pages (catch render errors)
+- ✅ Structured error logging (not just console.error)
+- ✅ API errors logged for debugging
+- ✅ Performance metrics available (Web Vitals)
+
+---
+
+## ♿ ACCESSIBILITY GUARDRAILS
+
+### WCAG 2.1 Level AA Compliance
+
+**Semantic HTML:**
+- ✅ Proper heading hierarchy (h1 → h2 → h3, not skipped)
+- ✅ All form inputs have associated `<label>` elements
+- ✅ All buttons use `<button>` (not divs with click handlers)
+- ✅ All links use `<a>` tags
+- ✅ Nav landmarks: `<nav>`, `<main>`, `<footer>`
+- ✅ Lists use `<ul>`, `<ol>`, `<li>` properly
+
+**Keyboard Navigation:**
+- [ ] Can tab through all interactive elements (buttons, inputs, links)
+- [ ] Focus indicator visible on all elements
+- [ ] No keyboard traps (can always tab away)
+- [ ] Tab order logical and predictable (left-to-right, top-to-bottom)
+- [ ] Modals trap focus properly (and release on close)
+- [ ] Dropdown menus keyboard accessible (arrows, enter, escape)
+
+**Color & Contrast:**
+- ✅ Text contrast 4.5:1 minimum (normal text)
+- ✅ Text contrast 3:1 minimum (large text, UI components)
+- ✅ Color not the only way to convey information (use icons/text)
+- ✅ Status badges have text labels (not just color)
+- ✅ Links distinguishable from surrounding text
+
+**Screen Reader Support:**
+- ✅ Images have alt text (alt="description") or role="presentation"
+- ✅ Icon-only buttons have aria-label
+- ✅ Form errors announced to screen readers (aria-live)
+- ✅ Page title meaningful and unique (`<title>` tag)
+- ✅ Heading structure matches page content
+- ✅ Skip to main content link (not visible by default)
+
+**Testing Checklist:**
+- [ ] Test with screen reader (NVDA, JAWS, or VoiceOver)
+- [ ] Tab through entire app using keyboard only
+- [ ] Test with browser zoom at 200%
+- [ ] Test with Windows High Contrast mode
+- [ ] Use axe DevTools or WAVE audit tool
+- [ ] Test with keyboard only (no mouse)
+
+---
+
+## 📊 GUARDRAIL ENFORCEMENT
 
 When I integrate the backend, I will:
 
@@ -520,9 +627,11 @@ When I integrate the backend, I will:
 5. ✅ Test all pages end-to-end
 6. ✅ Verify loading/error states
 7. ✅ Check responsive design
-8. ✅ Run accessibility audit
-9. ✅ Optimize performance
-10. ✅ Deploy and verify live
+8. ✅ Run accessibility audit (axe DevTools)
+9. ✅ Run security audit (OWASP Top 10)
+10. ✅ Verify performance targets met (Lighthouse)
+11. ✅ Optimize and deploy
+12. ✅ Monitor in production
 
 ---
 
