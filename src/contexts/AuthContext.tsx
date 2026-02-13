@@ -1,69 +1,43 @@
-import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import type { User, LoginRequest } from "@/types";
-import { apiClient } from "@/lib/api";
+const login = useCallback(async (email: string, password: string) => {
+  setIsLoading(true);
+  setError(null);
 
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  login: (data: LoginRequest) => Promise<void>;
-  logout: () => void;
-  isAdmin: boolean;
-}
+  try {
+    // Try real backend first
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-export const AuthContext = createContext<AuthState | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("auth_user");
-    return stored ? JSON.parse(stored) : null;
-  });
-  const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem("auth_token")
-  );
-  const [isLoading, setIsLoading] = useState(false);
-
-  const login = useCallback(async (data: LoginRequest) => {
-    setIsLoading(true);
+    if (response.ok) {
+      const data = await response.json();
+      const userData = { ...data.user, token: data.access_token };
+      setUser(userData);
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('mockMode', 'false');
+      setIsMockMode(false);
+    } else if (response.status === 401) {
+      setError('Invalid email or password');
+    } else {
+      throw new Error('Backend error');
+    }
+  } catch (err) {
+    console.log('Backend unreachable, using mock mode');
     try {
-      const res = await apiClient.login(data);
-      localStorage.setItem("auth_token", res.access_token);
-      localStorage.setItem("auth_user", JSON.stringify(res.user));
-      setToken(res.access_token);
-      setUser(res.user);
-    } finally {
-      setIsLoading(false);
+      const { mockLogin } = await import('@/lib/mock-data');
+      const mockUser = await mockLogin(email, password);
+      const userData = { ...mockUser.user, token: mockUser.access_token };
+      setUser(userData);
+      localStorage.setItem('authToken', mockUser.access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('mockMode', 'true');
+      setIsMockMode(true);
+    } catch (mockErr) {
+      setError(mockErr instanceof Error ? mockErr.message : 'Login failed');
     }
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
-    setToken(null);
-    setUser(null);
-  }, []);
-
-  // Validate token on mount
-  useEffect(() => {
-    if (token && !user) {
-      setIsLoading(true);
-      apiClient
-        .getMe()
-        .then((u) => {
-          setUser(u);
-          localStorage.setItem("auth_user", JSON.stringify(u));
-        })
-        .catch(() => logout())
-        .finally(() => setIsLoading(false));
-    }
-  }, [token, user, logout]);
-
-  const isAdmin = user?.role === "admin";
-
-  const value = useMemo(
-    () => ({ user, token, isLoading, login, logout, isAdmin }),
-    [user, token, isLoading, login, logout, isAdmin]
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
