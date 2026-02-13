@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { PawPrint } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 import type { LoginRequest } from "@/types";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, token } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +16,10 @@ export default function Login() {
     handleSubmit,
     formState: { isSubmitting, errors },
   } = useForm<LoginRequest>();
+
+  // Redirect if already logged in
+  if (token) return <Navigate to="/dashboard" replace />;
+
 
   const onSubmit = async (data: LoginRequest) => {
     setError(null);
