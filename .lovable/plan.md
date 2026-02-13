@@ -1,27 +1,65 @@
 
 
-# Fix: Tailwind CSS v4 Compatibility
+# Fix: Tailwind CSS v4 Build Error
 
 ## Problem
-Tailwind CSS v4 uses a completely new configuration approach. The current setup mixes v4's `@import "tailwindcss"` with the legacy `tailwind.config.ts` file via `@config`, which doesn't work. This causes the build to fail silently, resulting in a blank preview.
+The dev server returns a 500 error because the CSS variables and `@theme inline` block are configured incorrectly for Tailwind v4. Currently:
+- `:root` variables store raw HSL values like `210 20% 90%`
+- `@theme inline` wraps them with `hsl(var(--border))`
+
+This doesn't work reliably with Tailwind v4's theme resolution.
 
 ## Solution
-Convert the theme from `tailwind.config.ts` into Tailwind v4's CSS-based `@theme` directive inside `src/index.css`, and remove the legacy config reference.
+Restructure the CSS so that:
+1. `:root` variables store **complete color values** including `hsl()`, e.g. `--border: hsl(210 20% 90%)`
+2. `@theme inline` references them with just `var(--border)` (no hsl wrapper)
+3. Base layer styles also use `var(--border)` directly (no hsl wrapper)
 
-## Changes
+Same change applies to `.dark` overrides.
 
-### 1. Rewrite `src/index.css`
-- Remove `@config "../tailwind.config.ts"`
-- Add a `@theme` block defining all custom colors, border-radius, and fonts using CSS variables
-- Keep the existing CSS variable definitions in `:root` and `.dark`
-- Replace `@apply border-border` with plain CSS (`border-color: hsl(var(--border))`)
+## File Changed
 
-### 2. Delete `tailwind.config.ts`
-- No longer needed -- all configuration lives in CSS now
+**`src/index.css`** -- single file change:
 
-### 3. Update `postcss.config.js`
-- Remove `autoprefixer` (Tailwind v4 handles it automatically)
+### `@theme inline` block
+Remove `hsl()` wrappers from all color references:
+```css
+@theme inline {
+  --color-border: var(--border);
+  --color-background: var(--background);
+  --color-primary: var(--primary);
+  /* ... same pattern for all colors */
+}
+```
 
-## Why This Fixes It
-Tailwind v4 has its own module system. By using `@theme` to register custom utility values, classes like `bg-background`, `text-foreground`, and `border-border` become valid utilities that the compiler recognizes.
+### `:root` and `.dark` blocks
+Add `hsl()` to every color variable value:
+```css
+:root {
+  --background: hsl(210 20% 98%);
+  --foreground: hsl(220 25% 10%);
+  --border: hsl(214 20% 90%);
+  /* ... same pattern for all colors */
+}
+```
+
+### Base layer
+Update to use variables directly:
+```css
+@layer base {
+  * { border-color: var(--border); }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+```
+
+## Why This Works
+Tailwind v4's `@theme inline` expects the referenced variables to already be valid CSS color values. By moving `hsl()` into the variable definitions themselves, everything resolves correctly at runtime and Tailwind can generate utilities like `bg-background` and `border-border` without errors.
+
+## No Other Files Need Changes
+- `AuthContext.tsx` already exists with full implementation
+- `src/main.tsx` imports are correct
+- All other files are fine -- this is purely a CSS configuration issue
 
