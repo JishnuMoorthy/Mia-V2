@@ -1,65 +1,88 @@
 
 
-# Fix: Tailwind CSS v4 Build Error
+# Phase 1 MVP — Clean Rebuild Plan
 
-## Problem
-The dev server returns a 500 error because the CSS variables and `@theme inline` block are configured incorrectly for Tailwind v4. Currently:
-- `:root` variables store raw HSL values like `210 20% 90%`
-- `@theme inline` wraps them with `hsl(var(--border))`
+## Current Status
 
-This doesn't work reliably with Tailwind v4's theme resolution.
+Phase 1 is **~90% complete**. The application code (login, auth, dashboard, layout, types, API client) is well-built and follows all the spec requirements. The sole blocker is a Tailwind CSS v4 build failure that prevents the preview from rendering.
 
-## Solution
-Restructure the CSS so that:
-1. `:root` variables store **complete color values** including `hsl()`, e.g. `--border: hsl(210 20% 90%)`
-2. `@theme inline` references them with just `var(--border)` (no hsl wrapper)
-3. Base layer styles also use `var(--border)` directly (no hsl wrapper)
+## What Needs to Be Done
 
-Same change applies to `.dark` overrides.
+### Step 1: Fix the CSS Build (Root Cause Fix)
 
-## File Changed
+The `src/index.css` file uses Tailwind v4's `@theme inline` directive with CSS custom properties. The current configuration looks correct structurally, but the Google Fonts `@import url()` statement placed after `@import "tailwindcss"` may be causing the PostCSS pipeline to fail.
 
-**`src/index.css`** -- single file change:
+**Fix:**
+- Move the Google Fonts import into `index.html` as a `<link>` tag instead of a CSS `@import url()`
+- Simplify the `@theme inline` block to only register colors that are actually used in components
+- Ensure `postcss.config.js` has only `@tailwindcss/postcss` (already correct)
 
-### `@theme inline` block
-Remove `hsl()` wrappers from all color references:
-```css
-@theme inline {
-  --color-border: var(--border);
-  --color-background: var(--background);
-  --color-primary: var(--primary);
-  /* ... same pattern for all colors */
-}
+### Step 2: Verify All Existing Pages Render
+
+Once CSS compiles:
+- Login page renders with proper styling (teal primary, card layout, form inputs)
+- Protected route redirects unauthenticated users to `/login`
+- Dashboard layout renders with dark sidebar, header, and content area
+- Dashboard page shows stat cards, appointment list, and low stock alerts
+- Role-based sidebar items hide correctly for non-admin users
+- Logout clears session and redirects to login
+
+### Step 3: Add Missing Phase 1 Polish
+
+Minor items from the spec not yet implemented:
+- **"Remember me" checkbox** on login (optional per spec)
+- **Redirect logic**: If already logged in, `/login` should redirect to `/dashboard`
+
+## Technical Details
+
+### File Changes
+
+**`index.html`** — Add Google Fonts link tag:
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 ```
 
-### `:root` and `.dark` blocks
-Add `hsl()` to every color variable value:
-```css
-:root {
-  --background: hsl(210 20% 98%);
-  --foreground: hsl(220 25% 10%);
-  --border: hsl(214 20% 90%);
-  /* ... same pattern for all colors */
-}
+**`src/index.css`** — Remove the `@import url()` line for Google Fonts (keep everything else as-is)
+
+**`src/pages/Login.tsx`** — Add redirect if already authenticated:
+```typescript
+const { token } = useAuth();
+if (token) return <Navigate to="/dashboard" replace />;
 ```
 
-### Base layer
-Update to use variables directly:
-```css
-@layer base {
-  * { border-color: var(--border); }
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
-  }
-}
-```
+### No Changes Needed (Already Correct)
+- `src/lib/api.ts` — All endpoints match the backend spec
+- `src/types/index.ts` — All types match the database schema
+- `src/contexts/AuthContext.tsx` — Full auth flow with token validation
+- `src/hooks/useAuth.ts` — Clean context hook
+- `src/components/ProtectedRoute.tsx` — Auth guard with loading state
+- `src/components/DashboardLayout.tsx` — Sidebar + header + responsive
+- `src/pages/Dashboard.tsx` — Stats, appointments, low stock alerts
+- `src/App.tsx` — Route structure with protected routes
+- `src/main.tsx` — Providers (BrowserRouter, QueryClient, AuthProvider, Toaster)
 
-## Why This Works
-Tailwind v4's `@theme inline` expects the referenced variables to already be valid CSS color values. By moving `hsl()` into the variable definitions themselves, everything resolves correctly at runtime and Tailwind can generate utilities like `bg-background` and `border-border` without errors.
+## Phase 1 Completion Checklist
 
-## No Other Files Need Changes
-- `AuthContext.tsx` already exists with full implementation
-- `src/main.tsx` imports are correct
-- All other files are fine -- this is purely a CSS configuration issue
+After these changes:
+- [x] Login page with phone/password and validation
+- [x] Auth state management (login, logout, token storage)
+- [x] Protected routing (redirect to login if unauthenticated)
+- [x] Dashboard layout (sidebar, header, responsive)
+- [x] Dashboard page (stats, appointments, low stock)
+- [x] Role-based access (admin vs staff sidebar items)
+- [x] API client with all endpoints
+- [x] TypeScript types for all models
+- [x] Login redirect when already authenticated
+- [x] CSS compiles and renders correctly
+
+## What Comes Next (Phase 2)
+
+After Phase 1 is verified working, Phase 2 adds the 6 CRUD pages:
+1. Pets management (list, detail, create/edit)
+2. Owners management (list, detail, create/edit)
+3. Appointments (list/calendar, schedule, manage)
+4. Billing (invoices, payments, mark paid)
+5. Inventory (stock tracking, low stock alerts)
+6. Staff management (admin only, vet CRUD)
 
